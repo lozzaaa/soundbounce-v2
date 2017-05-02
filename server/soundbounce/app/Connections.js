@@ -1,6 +1,6 @@
 import _debug from 'debug';
 const debug = _debug('soundbounce:connections');
-
+import {Room, RoomActivities} from '../data/schema';
 export default class Connections {
 	constructor(app) {
 		this.app = app;
@@ -19,6 +19,10 @@ export default class Connections {
 			}
 		}
 		return users;
+	}
+
+	getAllSocketsForUserId(userId) {
+		return this.connectedSockets.filter(socket => socket.authenticatedUser.get('id') === userId);
 	}
 
 	addAuthenticatedSocket({socket, authenticatedUser}) {
@@ -52,7 +56,6 @@ export default class Connections {
 	}
 
 	joinRoom({socket, roomId}) {
-		socket.join(`room:${roomId}`);
 		this.app.rooms.joinRoom(roomId, socket.authenticatedUser).then(activeRoom => {
 			// on first join send back a full room sync
 			activeRoom.getFullSync().then(fullSync => {
@@ -78,8 +81,9 @@ export default class Connections {
 	}
 
 	addSocketEventListeners(socket) {
+		const {app} = this;
 		socket.on('room:create', (roomOptions) => {
-			this.app.rooms.createRoom(roomOptions)
+			app.rooms.createRoom(roomOptions)
 				.then(room => {
 					room.setCreator(socket.authenticatedUser);
 					room.save().then((room) => {
@@ -98,12 +102,34 @@ export default class Connections {
 		});
 
 		socket.on('room:event', ({roomId, event}) => {
-			const activeRoom = this.app.rooms.findActiveRoom(roomId);
+			const activeRoom = app.rooms.findActiveRoom(roomId);
 			if (!activeRoom) {
 				debug('Unable to process room message for inactive room ' + roomId);
 				return;
 			}
 			activeRoom.handleRoomEventMessage({sender: socket.authenticatedUser, event});
+		});
+
+		socket.on('home:data', () => {
+			const {activeRooms} = app.rooms;
+			// find all rooms with recent activity, and any active rooms
+			Room
+				.findAll({
+					limit: 20,
+					order: [['updatedAt', 'DESC']],
+					where: activeRooms.length > 0
+						? {id: {$notIn: activeRooms.map(ar => ar.id)}}
+						: null,
+					attributes: ['id', 'name']
+				})
+				.then(popularRooms => {
+					app.io.to(socket.allSocketsForThisUser).emit('home:data:ok', {
+						activeRooms: activeRooms.map(activeRoom =>
+							(activeRoom.room.get({plain: true}))
+						),
+						popularRooms: popularRooms.map(room => (room.get({plain: true})))
+					});
+				});
 		});
 	}
 }

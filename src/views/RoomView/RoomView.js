@@ -1,10 +1,17 @@
 /* @flow */
 import React, {Component, PropTypes} from 'react';
 import {connect} from 'react-redux';
+import {ROOM_CHAT} from 'redux/modules/shared/room';
+import {uiUpdate} from 'redux/modules/ui';
 import {selectCurrentUser} from 'redux/modules/users';
 import {socketEmitRoomEvent, socketEmitRoomJoin} from 'redux/modules/socket';
+import ChatPanel from 'components/room/chat/ChatPanel';
+import ColorContextProvider from 'components/context/color/ColorContextProvider';
 
-import classes from './roomView.css';
+import theme from './roomView.css';
+import TopBar from 'components/room/roomTopBar/RoomTopBar';
+import Dots from '../../components/room/backgrounds/Dots';
+import ScrollStyle from '../../components/ui/scroll/ScrollStyle';
 
 class RoomView extends Component {
 	static propTypes = {
@@ -12,7 +19,10 @@ class RoomView extends Component {
 		emitRoomJoin: PropTypes.func,
 		currentUser: PropTypes.object,
 		params: PropTypes.object,
-		room: PropTypes.object
+		room: PropTypes.object,
+		actionLogForChatPanel: PropTypes.array,
+		roomChatText: PropTypes.string,
+		clearChatText: PropTypes.func
 	};
 
 	// try to pull spotify track Ids from drop text
@@ -55,37 +65,56 @@ class RoomView extends Component {
 		document.removeEventListener('dragover', this.onDragOver);
 	}
 
-	render() {
-		const {room, params} = this.props;
+	onChatSend() {
+		const {roomChatText, clearChatText, emitRoomEvent} = this.props;
+		if (roomChatText === '') {
+			return;
+		}
+		emitRoomEvent({
+			type: 'chat',
+			text: roomChatText
+		});
+		clearChatText();
+	}
 
+	render() {
+		const {room, params, actionLogForChatPanel} = this.props;
 		if (room.id !== params.roomId) {
 			// on mount we emitted a room join, so shouldn't be long now
-			return <div className={classes.container}>
-				Looking for room...
+			return <div className={theme.container}>
+				Connecting to room...
 			</div>;
 		}
 
 		return (
-			<div className={classes.container}>
-				<div className={classes.room}>
-					<div className={classes.name}>
-						{room.name}
+			<ColorContextProvider colors={room.config.colors}>
+				<div className={theme.container}>
+					<ScrollStyle size={0.6} alpha={0.45}/>
+					<Dots />
+					<TopBar room={room}/>
+					<div className={theme.room}>
+
 					</div>
-					<div className={classes.listeners}>
-						Listeners:
-						{room.listeners && room.listeners.map(user => (
-							<div>- {user}</div>
-						))}
+					<div className={theme.chat}>
+						<ChatPanel onChatSend={this.onChatSend.bind(this)}
+								   actionLog={actionLogForChatPanel}/>
 					</div>
 				</div>
-			</div>
+			</ColorContextProvider>
 		);
 	}
 }
 
 const mapStateToProps = state => ({
 	currentUser: selectCurrentUser(state),
-	room: state.room
+	room: state.room,
+	actionLogForChatPanel: state.room.actionLog.filter(al => al.type === ROOM_CHAT)
+		.map(chatWithUserId => ({
+			...chatWithUserId,
+			sentByCurrentUser: chatWithUserId.payload.userId === state.users.currentUserId,
+			user: state.users.users[chatWithUserId.payload.userId]
+		})),
+	roomChatText: state.ui['roomChat']
 });
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
@@ -94,6 +123,9 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 	},
 	emitRoomJoin: () => {
 		dispatch(socketEmitRoomJoin(ownProps.params.roomId));
+	},
+	clearChatText: () => {
+		dispatch(uiUpdate({key: 'roomChat', newState: ''}));
 	}
 });
 

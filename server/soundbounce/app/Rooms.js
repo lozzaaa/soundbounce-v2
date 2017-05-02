@@ -12,12 +12,10 @@ export default class Rooms {
 	activeRooms = [];
 
 	createRoom(roomOptions) {
-		debug(`Creating room "${roomOptions.name}"`);
-
+		debug(`Creating new room "${roomOptions.name}"`);
 		return Room.create({
 			id: shortid.generate(),
-			name: roomOptions.name,
-			state: null,
+			...roomOptions,
 			nowPlayingStartedAt: null,
 			nowPlayingTrackId: null
 		});
@@ -33,6 +31,8 @@ export default class Rooms {
 		const leaveFirst = (currentRoomId && currentRoomId !== roomId)
 			? this.leaveRoom(user.get('currentRoomId'), user)
 			: Promise.resolve({success: true});
+
+		const userId = user.get('id');
 
 		return leaveFirst.then(() => {
 			return Room.findOne({where: {id: roomId}}).then(room => {
@@ -53,9 +53,17 @@ export default class Rooms {
 				// log this join
 				RoomActivity.create({
 					type: RoomActivities.userJoin,
-					userId: user.get('id'),
+					userId,
 					roomId
 				});
+
+				// tell any all sockets from this user to go to this room
+				this.app.connections.getAllSocketsForUserId(userId).forEach(socket => {
+					socket.join(`room:${roomId}`);
+				});
+
+				// notify users in the room
+				activeRoom.emitUserJoin({userId});
 
 				// save both user and room then return
 				return Promise.all([
@@ -71,6 +79,8 @@ export default class Rooms {
 	}
 
 	leaveRoom(roomId, user) {
+		const userId = user.get('id');
+
 		return Room.findOne({where: {id: roomId}}).then(room => {
 			debug(`${user.get('nickname')} left ${room.name}`);
 
@@ -79,8 +89,12 @@ export default class Rooms {
 			// log this leave
 			RoomActivity.create({
 				type: RoomActivities.userLeave,
-				userId: user.get('id'),
+				userId,
 				roomId
+			});
+
+			this.app.connections.getAllSocketsForUserId(userId).forEach(socket => {
+				socket.leave(`room:${roomId}`);
 			});
 
 			// save both user and room then return
@@ -90,6 +104,7 @@ export default class Rooms {
 			]).then(() => {
 				// now the user is saved, check if the room is still active
 				const activeRoom = this.findActiveRoom(roomId);
+				activeRoom.emitUserLeave({userId: user.get('id')});
 				if (activeRoom && this.app.connections.getConnectedUsersForRoom(roomId).length === 0) {
 					debug(`No more users left in room '${room.get('name')}', shutting down`);
 					activeRoom.shutdown();

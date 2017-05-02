@@ -51,8 +51,9 @@ export default (app) => {
 	app.get('/spotify-oauth-callback', (req, res) => {
 		const {code, state} = req.query;
 		const storedState = req.cookies ? req.cookies[stateKey] : null;
-		if (state === null || state !== storedState) {
-			res.redirect('/error/invalid-oauth-state');
+		if (storedState && (state === null || state !== storedState)) {
+			res.redirect('/error/invalid-oauth-state?state=' + encodeURIComponent(state) +
+				'&storedState=' + encodeURIComponent(storedState));
 		} else {
 			res.clearCookie(stateKey);
 			const authOptions = {

@@ -1,8 +1,10 @@
 import React, {PropTypes, Component} from 'react';
 import {connect} from 'react-redux';
 import {selectCurrentUser} from 'redux/modules/users';
-import TopBar from 'components/topBar/TopBar';
-import classes from './layout.css';
+import MainNavigation from 'components/navigation/MainNavigation';
+import BlurredNowPlaying from 'components/player/BlurredNowPlaying';
+
+import theme from './layout.css';
 
 class CoreLayout extends Component {
 	static propTypes = {
@@ -16,10 +18,12 @@ class CoreLayout extends Component {
 			return null;
 		}
 		return (
-
-			<div className={classes.app}>
-				<TopBar/>
-				<div className={classes.children}>
+			<div className={theme.app}>
+				<div className={theme.bg}>
+					<BlurredNowPlaying/>
+				</div>
+				<MainNavigation/>
+				<div className={theme.container}>
 					{children}
 				</div>
 			</div>

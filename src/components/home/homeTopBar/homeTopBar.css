@@ -1,0 +1,28 @@
+.topBar {
+	height: 6rem;
+}
+
+.search {
+	composes: surround from 'shared/css/input.css';
+	position: relative;
+	top: 1.9rem;
+	margin-left: 2rem;
+	width: 30%;
+	max-width: 20rem;
+}
+
+.input {
+	composes: input from 'shared/css/input.css';
+}
+
+.searchIcon {
+	position: absolute;
+	right: 0.3rem;
+	top: 0.3rem;
+	cursor: pointer;
+	opacity: 0.6;
+}
+
+.searchIcon:hover {
+	opacity: 0.8;
+}

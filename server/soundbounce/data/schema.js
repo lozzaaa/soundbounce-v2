@@ -30,7 +30,7 @@ export const User = sequelize.define('user', {
 	id: {type: Sequelize.STRING, allowNull: false, primaryKey: true},
 	name: {type: Sequelize.STRING, allowNull: false},
 	nickname: {type: Sequelize.STRING, allowNull: false},
-	avatar: {type: Sequelize.STRING, allowNulls: false},
+	avatar: {type: Sequelize.STRING},
 	email: {type: Sequelize.STRING},
 	profile: {type: Sequelize.JSONB},
 	prefs: {type: Sequelize.JSONB},
@@ -53,12 +53,21 @@ export const UserActivities = {
 export const Room = sequelize.define('room', {
 	id: {type: Sequelize.STRING, allowNull: false, primaryKey: true},
 	name: {type: Sequelize.STRING, allowNull: false},
-	state: {type: Sequelize.JSONB},
-	config: {type: Sequelize.JSONB}
+	reduxState: {type: Sequelize.JSONB},
+	config: {type: Sequelize.JSONB},
+	shutdownAt: {type: Sequelize.DATE},
+	isActive: {type: Sequelize.BOOLEAN}
 });
 
 Room.belongsTo(User, {as: 'Creator', foreignKey: 'creatorId'});
 Room.belongsTo(Track, {as: 'NowPlaying', foreignKey: 'nowPlayingTrackId'});
+
+export const RoomUser = sequelize.define('roomUser', {
+	details: {type: Sequelize.JSONB}
+});
+
+Room.belongsToMany(User, {through: RoomUser});
+User.belongsToMany(Room, {through: RoomUser});
 
 export const TrackArtist = sequelize.define('trackArtist', {});
 Track.belongsToMany(Artist, {through: TrackArtist});

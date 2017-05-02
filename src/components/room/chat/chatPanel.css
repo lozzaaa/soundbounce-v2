@@ -1,0 +1,39 @@
+.panel {
+	height: calc(100%);
+
+	font-size: 100%;
+}
+
+.chatBox {
+	composes: surround from 'shared/css/input.css';
+	position: absolute;
+	bottom: 0.5rem;
+	width: calc(100% - 4.2rem);
+}
+
+.input {
+	composes: input from 'shared/css/input.css';
+}
+
+.sendIcon {
+	position: absolute;
+	right: 0.3rem;
+	top: 0.3rem;
+	cursor: pointer;
+	opacity: 0.6;
+}
+
+.sendIcon:hover {
+	opacity: 0.8;
+}
+
+.chatScroll {
+	height: calc(100% - 2.9rem);
+	overflow-y: scroll;
+	-webkit-mask-image: -webkit-gradient(linear, left 5%, left top, from(rgba(0, 0, 0, 1)), to(rgba(0, 0, 0, 0)))
+}
+
+.actionLog {
+	/* this is to push the first items ever posted in a room beneath the fade out */
+	padding-top: 3rem;
+}

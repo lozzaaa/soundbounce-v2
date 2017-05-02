@@ -1,45 +1,77 @@
 /* @flow */
 import React, {Component, PropTypes} from 'react';
 import {connect} from 'react-redux';
-import {socketEmitRoomCreate} from 'redux/modules/socket';
+import {Link} from 'react-router';
+import {socketEmitRoomCreate, socketRequestHomeData} from 'redux/modules/socket';
 import {selectCurrentUser} from 'redux/modules/users';
 
-import classes from './homeView.css';
+import TopBar from 'components/home/homeTopBar/HomeTopBar';
+
+import theme from './homeView.css';
 
 class HomeView extends Component {
 	static propTypes = {
 		createRoom: PropTypes.func.isRequired,
-		currentUser: PropTypes.object
+		currentUser: PropTypes.object,
+		requestHomeData: PropTypes.func,
+		home: PropTypes.object
 	};
 
 	clickCreateRoom = (evt) => {
 		const {createRoom, currentUser} = this.props;
-
+		// todo: better ui here!
 		const roomName = prompt('Enter your room name (this will be nice ui later!)',
 			`${currentUser.nickname}'s room`);
+		const color = prompt('Enter your color', '#ad009f');
 
 		createRoom({
-			name: roomName
+			name: roomName,
+			config: {
+				colors: {
+					primary: color
+				}
+			}
 		});
 	};
 
+	componentWillMount() {
+		this.props.requestHomeData();
+	}
+
 	render() {
+		const {home} = this.props;
 		return (
-			<div className={classes.container}>
-				<button onClick={this.clickCreateRoom}>Create room</button>
-				<br/>
+			<div className={theme.container}>
+				<TopBar/>
+				<div className={theme.home}>
+					{home.activeRooms.map(room => (
+						<div key={room.id}> - <Link to={`/room/${room.id}`}>{room.name}</Link>
+							[<span
+								style={{color: room.config.colors.primary}}>ACTIVE</span>]
+						</div>
+					))}
+					{home.popularRooms.map(room => (
+						<div key={room.id}> - <Link to={`/room/${room.id}`}>{room.name}</Link></div>
+					))}
+					<br/>
+					<button onClick={this.clickCreateRoom}>Create new room</button>
+				</div>
 			</div>
 		);
 	}
 }
 
 const mapStateToProps = state => ({
-	currentUser: selectCurrentUser(state)
+	currentUser: selectCurrentUser(state),
+	home: state.home
 });
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
 	createRoom: (room) => {
 		dispatch(socketEmitRoomCreate(room));
+	},
+	requestHomeData: () => {
+		dispatch(socketRequestHomeData());
 	}
 });
 
