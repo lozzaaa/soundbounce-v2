@@ -1,11 +1,42 @@
+.roomAndChat {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	z-index: 2;
+}
+
 .room {
-	float: left;
+	position: absolute;
+	overflow: auto;
+	left: 2rem;
+	top: 6rem;
+	bottom: 0;
+	right: 22.5rem;
+	min-height: 0;
 }
 
 .chat {
-	position: fixed;
-	right: 0;
-	height: calc(100% - 6rem);
-	width: 30%;
+	position: absolute;
+	top: 6rem;
+	bottom: 0;
+	right: 0.5rem;
+	width: 21.5rem;
+	min-height: 0;
 }
 
+@media (max-width: 900px) {
+	/* narrower chat when narrower window
+    todo: mobile versions of this kind of thing
+     */
+	.room {
+		composes: room;
+		right: 17.5rem;
+	}
+
+	.chat {
+		composes: chat;
+		width: 17rem;
+	}
+}
